@@ -1,0 +1,50 @@
+<!doctype html>
+<html lang="id">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#fff8ed"><meta name="description" content="AbsenIn — presensi, izin, dan kas anggota.">
+<link rel="manifest" href="manifest.webmanifest"><link rel="stylesheet" href="styles.css">
+<title>Masuk — AbsenIn</title>
+</head>
+<body data-page="login">
+<main class="login-wrap auth-v2">
+  <aside class="login-art auth-art">
+    <a class="brand" href="index.html"><img class="brand-logo" src="absenin-logo.jpg" alt="Logo AbsenIn"><div>AbsenIn<small>ATTENDANCE SYSTEM</small></div></a>
+    <div class="auth-art-copy"><div class="eyebrow">HADIR. AKTIF. BERKARYA.</div><h1>Bangun hal hebat.<br><span>Mulai dari hadir.</span></h1><p>Satu tempat untuk absensi latihan, riwayat kegiatan, pengajuan izin, dan informasi kas anggota robotik.</p><div class="auth-art-illustration"><div class="orb orb-a"></div><div class="orb orb-b"></div><div class="robot-card"><img class="brand-logo" src="absenin-logo.jpg" alt="Logo AbsenIn"><b>AbsenIn</b><small>YOUR TEAM SPACE</small><div class="mini-bars"><i></i><i></i><i></i><i></i><i></i><i></i></div></div></div></div>
+    <div class="footnote">AbsenIn · Portal anggota</div>
+  </aside>
+  <section class="login-form-wrap auth-main">
+    <form class="login-form auth-form" id="loginForm">
+      <div class="auth-top"><div class="brand mobile-brand"><img class="brand-logo" src="absenin-logo.jpg" alt="Logo AbsenIn"><div>AbsenIn<small>ABSENSI ANGGOTA</small></div></div><button type="button" class="icon-btn" data-theme aria-label="Ganti tema">◐</button></div>
+      <div class="step-pill">AKSES ANGGOTA · AMAN & MUDAH</div>
+      <div class="eyebrow">SELAMAT DATANG KEMBALI</div><h2>Masuk ke akunmu</h2><p class="muted auth-subtitle">Gunakan ID unik yang diberikan pengurus robotik.</p>
+      <label for="idUnik">ID Unik Anggota <span class="required">*</span></label><div class="auth-input"><span>♙</span><input id="idUnik" placeholder="Contoh: ROBOT_ID01" autocomplete="username" required></div>
+      <label for="loginPassword">Password <span class="required">*</span></label><div class="auth-input"><span>●</span><input id="loginPassword" type="password" placeholder="Masukkan password" autocomplete="current-password" required></div>
+      <button class="btn full auth-submit" type="submit">Masuk ke dashboard <span>→</span></button>
+      <div class="notice auth-note"><b>Belum punya ID?</b><br>Ajukan akun ke pengurus. ID unik diterbitkan pengurus agar akun tidak bisa dibuat sembarangan.</div>
+      <button type="button" class="text-action" id="showSignup">Minta akun anggota <span>→</span></button>
+      <p class="footnote">Masuk menggunakan ID unik dan password yang diberikan pengurus.</p>
+    </form>
+    <form class="login-form auth-form hidden" id="signupForm">
+      <div class="auth-top"><div class="brand mobile-brand"><img class="brand-logo" src="absenin-logo.jpg" alt="Logo AbsenIn"><div>AbsenIn<small>PERMINTAAN AKUN</small></div></div><button type="button" class="icon-btn" data-theme aria-label="Ganti tema">◐</button></div>
+      <div class="step-pill">LANGKAH 1 DARI 1</div><div class="eyebrow">BERGABUNG DENGAN TIM</div><h2>Ajukan akun</h2><p class="muted auth-subtitle">Isi data dasar. Pengurus akan memeriksa dan memberikan ID unik.</p>
+      <label for="signupName">Nama lengkap <span class="required">*</span></label><div class="auth-input"><span>♙</span><input id="signupName" required placeholder="Masukkan nama lengkap" autocomplete="name"></div>
+      <label for="signupClass">Kelas / jurusan <span class="required">*</span></label><div class="auth-input"><span>▤</span><input id="signupClass" required placeholder="Contoh: XI.5"></div>
+      <label for="signupWA">Nomor WhatsApp <span class="required">*</span></label><div class="auth-input"><span>☏</span><input id="signupWA" required inputmode="tel" placeholder="08xxxxxxxxxx" autocomplete="tel"></div>
+      <label class="agree-row"><input id="signupAgree" type="checkbox" required> Saya setuju data ini digunakan untuk administrasi absensi internal.</label>
+      <button class="btn full auth-submit" type="submit">Kirim permintaan <span>→</span></button><button type="button" class="text-action" id="showLogin">← Kembali ke halaman masuk</button>
+      <p class="footnote">Pada prototipe ini permintaan disimpan di browser yang sama. Sinkronisasi ke pengurus memerlukan backend aktif.</p>
+    </form>
+  </section>
+</main>
+<script type="module" src="app.js"></script>
+<script>
+document.addEventListener('DOMContentLoaded',()=>{
+ const login=document.querySelector('#loginForm'), signup=document.querySelector('#signupForm');
+ document.querySelector('#showSignup')?.addEventListener('click',()=>{login.classList.add('hidden');signup.classList.remove('hidden');document.title='Ajukan Akun — AbsenIn'});
+ document.querySelector('#showLogin')?.addEventListener('click',()=>{signup.classList.add('hidden');login.classList.remove('hidden');document.title='Masuk — AbsenIn'});
+ signup?.addEventListener('submit',e=>{e.preventDefault();if(!document.querySelector('#signupAgree').checked)return;let req=JSON.parse(localStorage.getItem('ear_signup_requests')||'[]');req.push({name:document.querySelector('#signupName').value.trim(),kelas:document.querySelector('#signupClass').value.trim(),whatsapp:document.querySelector('#signupWA').value.trim(),createdAt:new Date().toISOString(),status:'MENUNGGU'});localStorage.setItem('ear_signup_requests',JSON.stringify(req));alert('Permintaan tersimpan pada perangkat ini. Pada demo, pengurus belum menerima data ini lintas perangkat.');signup.reset();signup.classList.add('hidden');login.classList.remove('hidden')});
+ if('serviceWorker' in navigator) navigator.serviceWorker.register('./sw.js').catch(()=>{});
+});
+</script>
+</body></html>
