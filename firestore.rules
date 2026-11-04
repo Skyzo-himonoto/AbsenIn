@@ -1,0 +1,55 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    function signedIn() { return request.auth != null; }
+    function profile() { return get(/databases/$(database)/documents/users/$(request.auth.uid)).data; }
+    function admin() { return signedIn() && profile().role == "PENGURUS"; }
+    function self(userId) { return signedIn() && profile().user_id == userId; }
+
+    match /users/{uid} {
+      allow read: if signedIn() && (request.auth.uid == uid || admin());
+      allow create, update, delete: if admin();
+    }
+    match /sessions/{id} {
+      allow read: if signedIn();
+      allow create, update, delete: if admin();
+    }
+    match /attendances/{id} {
+      allow read: if signedIn() && (admin() || self(resource.data.user_id));
+      allow create: if signedIn()
+        && request.resource.data.user_id == profile().user_id
+        && request.resource.data.nama == profile().nama
+        && request.resource.data.session_id == "current"
+        && request.resource.data.keys().hasAll(["user_id", "nama", "session_id", "qr_token", "created_at", "date", "time", "method"])
+        && get(/databases/$(database)/documents/sessions/current).data.active == true
+        && get(/databases/$(database)/documents/sessions/current).data.token == request.resource.data.qr_token
+        && get(/databases/$(database)/documents/sessions/current).data.tokenExpiresAt > request.time;
+      allow update, delete: if admin();
+    }
+    match /leave_requests/{id} {
+      allow read: if signedIn() && (admin() || self(resource.data.user_id));
+      allow create: if signedIn()
+        && request.resource.data.user_id == profile().user_id
+        && request.resource.data.nama == profile().nama
+        && request.resource.data.status == "Menunggu"
+        && request.resource.data.keys().hasAll(["user_id", "nama", "date", "reason", "detail", "status", "created_at"])
+        && request.resource.data.keys().hasOnly(["user_id", "nama", "date", "reason", "detail", "status", "created_at"]);
+      allow update: if admin()
+        && request.resource.data.user_id == resource.data.user_id
+        && request.resource.data.nama == resource.data.nama
+        && request.resource.data.date == resource.data.date
+        && request.resource.data.reason == resource.data.reason;
+      allow delete: if admin();
+    }
+    match /kas_transactions/{id} {
+      allow read: if signedIn() && (admin() || self(resource.data.user_id));
+      allow write: if admin();
+    }
+    match /system_logs/{id} {
+      allow read: if admin();
+      allow create: if signedIn();
+      allow update, delete: if admin();
+    }
+    match /{document=**} { allow read, write: if false; }
+  }
+}
