@@ -69,7 +69,20 @@ async function processQR(raw){
 
 function distance(a,b,c,d){const r=x=>x*Math.PI/180;let x=r(c-a),y=r(d-b),z=Math.sin(x/2)**2+Math.cos(r(a))*Math.cos(r(c))*Math.sin(y/2)**2;return 6371000*2*Math.atan2(Math.sqrt(z),Math.sqrt(1-z))}
 function makeTempPassword(){const chars='ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz23456789!@#';const bytes=new Uint8Array(14);crypto.getRandomValues(bytes);return Array.from(bytes,b=>chars[b%chars.length]).join('')}
-async function admin(){seed();const u=requireUser('pengurus');if(!u)return;bindCommon();$('#dateToday').textContent=dateLabel();let users=[],logs=[],izin=[];try{users=(await fsList('users')).filter(x=>String(x.role).toUpperCase()==='SISWA').map(x=>({...x,id:x.user_id,name:x.nama||x.nama_lengkap||x.name||'',role:'siswa'}));logs=(await fsList('attendances')).map(x=>({...x,id:x.user_id,name:x.nama,date:x.date||'',time:x.time||'',timestamp:x.created_at?.toMillis?.()||0,method:x.method||'QR'}));izin=await fsList('leave_requests');}catch(e){console.error(e);toast('Gagal memuat data Firestore: '+(e.message||''))}$('#memberCount').textContent=users.length;$('#presentCount').textContent=logs.filter(x=>x.date===todayKey()).length;$('#pendingCount').textContent=izin.filter(x=>x.status==='Menunggu').length;$('#adminName').textContent=u.name;$('#logRows').innerHTML=logs.slice().sort((a,b)=>b.timestamp-a.timestamp).slice(0,12).map(x=>`<tr><td>${x.name}</td><td>${x.date}</td><td>${x.time}</td><td><span class="pill green">Hadir</span></td></tr>`).join('')||'<tr><td colspan="4" class="muted">Belum ada absensi tercatat.</td></tr>';renderIzin(izin);renderKas();$('#openSession')?.addEventListener('click',openSession);$('#kasForm')?.addEventListener('submit',e=>{e.preventDefault();let id=$('#kasUser').value,st=$('#kasValue').value;let arr=get(DB.kas,[]).filter(x=>x.id!==id);arr.push({id,status:st,updated:dateLabel()});put(DB.kas,arr);toast('Status kas diperbarui.');renderKas()});$('#addUserForm')?.addEventListener('submit', async e => {
+async function admin(){
+  alert('TES: fungsi admin berjalan');
+
+  seed();
+  const u=requireUser('pengurus');
+
+  if(!u){
+    alert('TES: sesi pengurus tidak ditemukan');
+    return;
+  }
+
+  alert('TES: sesi pengurus ditemukan');
+
+  bindCommon();$('#dateToday').textContent=dateLabel();let users=[],logs=[],izin=[];try{users=(await fsList('users')).filter(x=>String(x.role).toUpperCase()==='SISWA').map(x=>({...x,id:x.user_id,name:x.nama||x.nama_lengkap||x.name||'',role:'siswa'}));logs=(await fsList('attendances')).map(x=>({...x,id:x.user_id,name:x.nama,date:x.date||'',time:x.time||'',timestamp:x.created_at?.toMillis?.()||0,method:x.method||'QR'}));izin=await fsList('leave_requests');}catch(e){console.error(e);toast('Gagal memuat data Firestore: '+(e.message||''))}$('#memberCount').textContent=users.length;$('#presentCount').textContent=logs.filter(x=>x.date===todayKey()).length;$('#pendingCount').textContent=izin.filter(x=>x.status==='Menunggu').length;$('#adminName').textContent=u.name;$('#logRows').innerHTML=logs.slice().sort((a,b)=>b.timestamp-a.timestamp).slice(0,12).map(x=>`<tr><td>${x.name}</td><td>${x.date}</td><td>${x.time}</td><td><span class="pill green">Hadir</span></td></tr>`).join('')||'<tr><td colspan="4" class="muted">Belum ada absensi tercatat.</td></tr>';renderIzin(izin);renderKas();$('#openSession')?.addEventListener('click',openSession);$('#kasForm')?.addEventListener('submit',e=>{e.preventDefault();let id=$('#kasUser').value,st=$('#kasValue').value;let arr=get(DB.kas,[]).filter(x=>x.id!==id);arr.push({id,status:st,updated:dateLabel()});put(DB.kas,arr);toast('Status kas diperbarui.');renderKas()});$('#addUserForm')?.addEventListener('submit', async e => {
   e.preventDefault();
 
   toast('HANDLER FORM BERJALAN');
