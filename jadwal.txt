@@ -1,0 +1,8 @@
+=== JADWAL KERJA ===
+Senin    : 08:00 - 17:00
+Selasa   : 08:00 - 17:00
+Rabu     : 08:00 - 17:00
+Kamis    : 08:00 - 17:00
+Jumat    : 08:00 - 17:00
+Sabtu    : LIBUR
+Minggu   : LIBUR
