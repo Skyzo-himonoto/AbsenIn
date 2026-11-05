@@ -20,7 +20,7 @@ export async function createMemberAccount({ userId, name, kelas, password }) {
   const current = auth.currentUser;
   if (!current) throw new Error("Sesi pengurus tidak ditemukan. Silakan login ulang.");
   const idToken = await current.getIdToken();
-  const response = await fetch("/api/admin/create-member", {
+  const response = await fetch("https://absenin-one.vercel.app/api/admin/create-member", {
     method: "POST",
     headers: { "Content-Type": "application/json", "Authorization": `Bearer ${idToken}` },
     body: JSON.stringify({ userId, name, kelas, password })
