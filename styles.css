@@ -22,3 +22,18 @@ body.dark .auth-v2{background:#15161a}body.dark .auth-art{background:#26211a;col
 
 /* AbsenIn brand logo */
 .brand-logo{width:42px;height:42px;object-fit:cover;border-radius:13px;flex-shrink:0;box-shadow:0 5px 16px #20233318}.robot-card .brand-logo{width:62px;height:62px;border-radius:16px;display:block;margin:0 auto 10px}.auth-art .brand-logo{width:42px;height:42px}
+
+/* Profil ID + bingkai (ringan, tanpa animasi) */
+.pfp{--ring:transparent;width:96px;height:96px;border-radius:50%;padding:4px;background:var(--ring);flex-shrink:0}
+.pfp-in{width:100%;height:100%;border-radius:50%;overflow:hidden;background:var(--pale);color:var(--orange);display:grid;place-items:center;font-weight:800;font-size:30px;border:3px solid var(--surface)}
+.pfp-in img{width:100%;height:100%;object-fit:cover;display:block}
+.pfp.sm{width:54px;height:54px;padding:3px}.pfp.sm .pfp-in{font-size:17px;border-width:2px}
+.fr-orange{--ring:var(--orange)}
+.fr-robotik{--ring:conic-gradient(#ff6a16,#f5c518,#16845b,#2b7de9,#ff6a16)}
+.fr-neon{--ring:linear-gradient(135deg,#00e5ff,#7c4dff)}
+.fr-emas{--ring:linear-gradient(135deg,#f7d774,#b8860b,#f7d774)}
+.id-card{display:flex;gap:16px;align-items:center}
+.id-card h2{margin:0 0 4px;font-size:20px}
+.frame-row{display:flex;gap:8px;flex-wrap:wrap;margin:10px 0}
+.frame-chip{background:var(--soft);color:var(--text);border:2px solid transparent;border-radius:999px;padding:8px 13px;font-size:12px;font-weight:700}
+.frame-chip.on{border-color:var(--orange);color:var(--orange)}

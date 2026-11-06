@@ -8,7 +8,13 @@ service cloud.firestore {
 
     match /users/{uid} {
       allow read: if signedIn() && (request.auth.uid == uid || admin());
-      allow create, update, delete: if admin();
+      allow create, delete: if admin();
+      allow update: if admin() || (
+        signedIn() && request.auth.uid == uid
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(["avatar_url", "active_frame_id"])
+        && request.resource.data.avatar_url is string
+        && request.resource.data.avatar_url.size() < 80000
+      );
     }
     match /sessions/{id} {
       allow read: if signedIn();
