@@ -16,14 +16,14 @@ export const auth = getAuth(firebaseApp);
 export const db = getFirestore(firebaseApp);
 
 // Member creation is performed by the trusted Vercel API, never by browser Admin SDK.
-export async function createMemberAccount({ userId, name, kelas, password }) {
+export async function createMemberAccount({ userId, name, kelas, password, gatePassword = "" }) {
   const current = auth.currentUser;
   if (!current) throw new Error("Sesi pengurus tidak ditemukan. Silakan login ulang.");
   const idToken = await current.getIdToken();
   const response = await fetch("https://absenin-one.vercel.app/api/admin/create-member", {
     method: "POST",
     headers: { "Content-Type": "application/json", "Authorization": `Bearer ${idToken}` },
-    body: JSON.stringify({ userId, name, kelas, password })
+    body: JSON.stringify({ userId, name, kelas, password, gatePassword })
   });
   const result = await response.json().catch(() => ({}));
   if (!response.ok) {

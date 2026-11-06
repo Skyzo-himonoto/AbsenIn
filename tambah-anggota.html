@@ -1,0 +1,52 @@
+<!doctype html>
+<html lang="id">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Tambah Anggota — AbsenIn</title>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+<main class="shell">
+  <header class="topbar">
+    <a class="brand" href="dashboard-pengurus.html">
+      <img class="brand-logo" src="absenin-logo.jpg" alt="Logo AbsenIn">
+      <div>AbsenIn<small>TAMBAH ANGGOTA</small></div>
+    </a>
+    <div class="top-actions"><a class="btn small ghost" href="dashboard-pengurus.html">← Dashboard</a></div>
+  </header>
+
+  <section class="card" style="max-width:520px;margin:16px auto">
+    <div class="eyebrow">KODE AKSES</div>
+    <label for="gate">Kode akses halaman ini</label>
+    <input class="input" id="gate" type="password" autocomplete="off" placeholder="Kosongkan jika belum diatur">
+    <p class="muted" style="font-size:12px">Kode diatur di Vercel (ADD_MEMBER_PASSWORD). Kalau belum diatur, boleh dikosongkan.</p>
+  </section>
+
+  <section class="card" style="max-width:520px;margin:16px auto">
+    <div class="eyebrow">SATU ANGGOTA</div>
+    <form id="addForm">
+      <label for="nama">Nama</label>
+      <input class="input" id="nama" required placeholder="Nama lengkap">
+      <label for="uid">ID unik</label>
+      <input class="input" id="uid" required placeholder="MIS. ROBOT_ID01">
+      <label for="kelas">Kelas / divisi</label>
+      <input class="input" id="kelas" placeholder="Anggota Robotik">
+      <label for="pw">Password awal (min. 6 karakter)</label>
+      <input class="input" id="pw" type="text" minlength="6" autocomplete="off" required>
+      <button class="btn" id="saveBtn" style="margin-top:16px" type="submit">+ Buat akun</button>
+    </form>
+    <p class="muted" id="msg" style="font-size:13px;margin-top:12px"></p>
+  </section>
+
+  <section class="card" style="max-width:520px;margin:16px auto">
+    <div class="eyebrow">BANYAK ANGGOTA</div>
+    <p class="muted" style="font-size:13px">Satu baris: ID,NAMA,KELAS. Password dibuat otomatis dan diunduh sebagai CSV.</p>
+    <textarea class="input" id="bulk" rows="5" placeholder="ROBOT_ID01,Nama Anggota,Anggota Robotik"></textarea>
+    <button class="btn ghost" id="bulkBtn" type="button">Buat akun dari daftar</button>
+    <p class="muted" id="bulkMsg" style="font-size:13px"></p>
+  </section>
+</main>
+<script type="module" src="tambah-anggota.js"></script>
+</body>
+</html>

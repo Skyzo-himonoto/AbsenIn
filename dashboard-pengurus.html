@@ -103,30 +103,9 @@
   <section class="grid">
     <div class="card">
       <div class="eyebrow">DATA ANGGOTA</div>
-      <h2 style="margin:8px 0 16px">Tambah anggota</h2>
-      <form id="addUserForm">
-        <label for="newUserName">Nama anggota</label>
-        <input class="input" id="newUserName" required placeholder="Nama lengkap">
-        <div class="form-row">
-          <div>
-            <label for="newUserId">ID unik</label>
-            <input class="input" id="newUserId" required placeholder="MIS. SISWA025">
-          </div>
-          <div>
-            <label for="newUserClass">Divisi / kelas</label>
-            <input class="input" id="newUserClass" placeholder="Anggota Robotik">
-          </div>
-        </div>
-        <label for="newUserPassword">Password awal (minimal 6 karakter)</label>
-        <input class="input" id="newUserPassword" type="password" minlength="6" autocomplete="new-password" required>
-        <button class="btn" style="margin-top:16px" type="submit">+ Buat akun anggota</button>
-      </form>
-      <hr style="margin:22px 0;border:0;border-top:1px solid var(--line)">
-      <div class="eyebrow">IMPOR BANYAK ANGGOTA</div>
-      <p class="muted" style="font-size:13px">Satu baris per anggota: ID,NAMA,KELAS. Password awal dibuat otomatis dan diunduh dalam CSV.</p>
-      <textarea class="input" id="bulkMemberCsv" rows="5" placeholder="ROBOT_ID01,Nama Anggota,Anggota Robotik&#10;ROBOT_ID02,Nama Anggota 2,Anggota Robotik"></textarea>
-      <button class="btn ghost" id="bulkMemberImport" type="button">Buat akun dari daftar</button>
-      <p class="muted" id="bulkResult" style="font-size:12px"></p>
+      <h2 style="margin:8px 0 8px">Tambah anggota</h2>
+      <p class="muted" style="font-size:13px">Halaman terpisah, ringan, dan dilindungi kode akses.</p>
+      <a class="btn" style="margin-top:12px;display:inline-block" href="tambah-anggota.html">Buka halaman tambah anggota →</a>
     </div>
 
     <div class="card">

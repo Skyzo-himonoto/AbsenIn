@@ -121,8 +121,6 @@ async function admin(){
   $('#addUserForm')?.addEventListener('submit', async e => {
     e.preventDefault();
 
-    alert('Tombol berhasil diklik!');
-    toast('HANDLER FORM BERJALAN');
     console.log('[AbsenIn] Form tambah anggota terdeteksi.');
 
     const id = $('#newUserId').value.trim().toUpperCase();

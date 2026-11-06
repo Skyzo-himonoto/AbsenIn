@@ -21,9 +21,14 @@ function getAdminApp() {
 
 module.exports = async function handler(req, res) {
   // CORS: mengizinkan frontend GitHub Pages
+  const allowed = [
+    "https://skyzo-himonoto.github.io",
+    "https://absenin-one.vercel.app"
+  ];
+  const origin = req.headers.origin;
   res.setHeader(
     "Access-Control-Allow-Origin",
-    "https://skyzo-himonoto.github.io"
+    allowed.includes(origin) ? origin : allowed[0]
   );
   res.setHeader("Access-Control-Allow-Methods", "POST, OPTIONS");
   res.setHeader(
@@ -77,6 +82,16 @@ module.exports = async function handler(req, res) {
 
     // Mengambil data anggota
     const body = req.body || {};
+
+    // Kode akses halaman Tambah Anggota (opsional).
+    // Aktif otomatis kalau ADD_MEMBER_PASSWORD diisi di Vercel.
+    const gate = process.env.ADD_MEMBER_PASSWORD;
+    if (gate && String(body.gatePassword || "") !== gate) {
+      return res.status(403).json({
+        error: "Kode akses salah.",
+        code: "gate/wrong-password"
+      });
+    }
 
     const userId = String(body.userId || "")
       .trim()
