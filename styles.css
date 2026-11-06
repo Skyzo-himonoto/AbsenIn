@@ -37,3 +37,21 @@ body.dark .auth-v2{background:#15161a}body.dark .auth-art{background:#26211a;col
 .frame-row{display:flex;gap:8px;flex-wrap:wrap;margin:10px 0}
 .frame-chip{background:var(--soft);color:var(--text);border:2px solid transparent;border-radius:999px;padding:8px 13px;font-size:12px;font-weight:700}
 .frame-chip.on{border-color:var(--orange);color:var(--orange)}
+
+.pfp{background:var(--ring,transparent)}
+.color-btn{display:inline-flex;align-items:center;gap:10px;background:var(--soft);color:var(--text);border-radius:999px;padding:8px 14px 8px 8px;font-weight:700;font-size:13px}
+.color-dot{width:24px;height:24px;border-radius:50%;border:2px solid var(--surface);box-shadow:0 0 0 1px var(--line);background:var(--dot,transparent)}
+.palette{display:grid;grid-template-columns:repeat(8,1fr);gap:8px;margin:12px 0;padding:12px;background:var(--soft);border-radius:16px}
+.palette button{aspect-ratio:1;border-radius:50%;background:var(--c);border:2px solid var(--surface);box-shadow:0 0 0 1px var(--line);padding:0;min-width:0}
+.palette button.on{box-shadow:0 0 0 3px var(--orange)}
+.palette .none{background:var(--surface);color:var(--muted);font-size:13px;font-weight:800}
+.palette label.custom{margin:0;aspect-ratio:1;border-radius:50%;background:conic-gradient(red,yellow,lime,cyan,blue,magenta,red);position:relative;overflow:hidden;border:2px solid var(--surface);box-shadow:0 0 0 1px var(--line)}
+.palette label.custom input{position:absolute;inset:0;opacity:0;width:100%;height:100%;cursor:pointer}
+
+button.pfp{border:0;cursor:pointer}
+.sheet{position:fixed;inset:0;z-index:50;background:#0007;display:flex;align-items:flex-end;justify-content:center}
+.sheet-panel{background:var(--surface);width:min(460px,100%);max-height:92vh;overflow-y:auto;border-radius:24px 24px 0 0;padding:20px}
+@media(min-width:600px){.sheet{align-items:center}.sheet-panel{border-radius:24px}}
+.sheet-hr{border:0;border-top:1px solid var(--line);margin:16px 0 12px}
+.sheet-row{display:flex;gap:8px;flex-wrap:wrap;margin-top:14px}
+.info-rows{margin-top:14px}.info-rows div{display:flex;justify-content:space-between;padding:9px 0;border-top:1px solid var(--line);font-size:13px}.info-rows span{color:var(--muted)}
