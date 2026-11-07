@@ -33,3 +33,21 @@ export async function createMemberAccount({ userId, name, kelas, password, gateP
   }
   return result;
 }
+
+export async function resetMemberPassword({ userId, password }) {
+  const current = auth.currentUser;
+  if (!current) throw new Error("Sesi pengurus tidak ditemukan. Silakan login ulang.");
+  const idToken = await current.getIdToken();
+  const response = await fetch("https://absenin-one.vercel.app/api/admin/reset-password", {
+    method: "POST",
+    headers: { "Content-Type": "application/json", "Authorization": `Bearer ${idToken}` },
+    body: JSON.stringify({ userId, password })
+  });
+  const result = await response.json().catch(() => ({}));
+  if (!response.ok) {
+    const error = new Error(result.error || `Backend gagal (${response.status}).`);
+    error.code = result.code || "backend/error";
+    throw error;
+  }
+  return result;
+}

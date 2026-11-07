@@ -1,4 +1,4 @@
-import { auth, db, createMemberAccount } from "./firebase.js";
+import { auth, db, createMemberAccount, resetMemberPassword } from "./firebase.js";
 import { signInWithEmailAndPassword, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.10.0/firebase-auth.js";
 import { doc, getDoc, collection, getDocs, query, where, serverTimestamp, runTransaction, setDoc, updateDoc, onSnapshot, Timestamp, addDoc } from "https://www.gstatic.com/firebasejs/11.10.0/firebase-firestore.js";
 const $=s=>document.querySelector(s), $$=s=>document.querySelectorAll(s);
@@ -145,6 +145,40 @@ async function admin(){
     finally{if(btn)btn.disabled=false}
   });
 
+  $('#manForm')?.addEventListener('submit',async e=>{
+    e.preventDefault();
+    const id=$('#manUser').value,st=$('#manStatus').value,date=$('#manDate').value||todayKey();
+    const m=users.find(x=>x.id===id);
+    if(!m){toast('Pilih anggota dulu.');return}
+    if(!/^\d{4}-\d{2}-\d{2}$/.test(date)){toast('Tanggal tidak valid.');return}
+    const btn=$('#manForm button[type=submit]');if(btn)btn.disabled=true;
+    try{
+      const docId=`${id}_${date}`.replace(/[^A-Za-z0-9_-]/g,'_');
+      const w=new Date(Date.now()+7*3600000);
+      const time=String(w.getUTCHours()).padStart(2,'0')+':'+String(w.getUTCMinutes()).padStart(2,'0');
+      await setDoc(doc(db,'attendances',docId),{user_id:id,nama:m.name,session_id:'manual',date,time,method:'Manual',status:st,note:($('#manNote')?.value||'').trim().slice(0,120),created_at:serverTimestamp()});
+      toast('Absen manual disimpan.');setTimeout(()=>location.reload(),700);
+    }catch(err){console.error(err);toast('Gagal menyimpan absen manual: '+(err.message||'Periksa Firestore Rules.'))}
+    finally{if(btn)btn.disabled=false}
+  });
+
+  $('#pwGen')?.addEventListener('click',()=>{const p=makeTempPassword();const el=$('#pwNew');if(el)el.value=p});
+  $('#pwForm')?.addEventListener('submit',async e=>{
+    e.preventDefault();
+    const id=$('#pwUser').value,pw=($('#pwNew').value||'');
+    const out=$('#pwMsg');
+    if(!id){toast('Pilih anggota dulu.');return}
+    if(pw.length<6){toast('Password minimal 6 karakter.');return}
+    const btn=$('#pwForm button[type=submit]');if(btn)btn.disabled=true;
+    if(out)out.textContent='Mengganti password...';
+    try{
+      await resetMemberPassword({userId:id,password:pw});
+      if(out)out.textContent=`Password ${id} sudah diganti menjadi: ${pw}  (catat dan berikan ke anggota; anggota sebaiknya login ulang).`;
+      $('#pwNew').value='';toast('Password berhasil diganti.');
+    }catch(err){console.error(err);if(out)out.textContent='Gagal: '+(err.message||'')+(err.code?` (${err.code})`:'')}
+    finally{if(btn)btn.disabled=false}
+  });
+
   $('#addUserForm')?.addEventListener('submit', async e => {
     e.preventDefault();
 
@@ -249,6 +283,9 @@ function renderKas(users=[],kasList=[]){
   const sel=$('#kasUser'),rows=$('#kasRows');
   const keep=sel?.value;
   if(sel){sel.innerHTML=users.map(x=>`<option value="${escapeHtml(x.id)}">${escapeHtml(x.name)} (${escapeHtml(x.id)})</option>`).join('');if(keep)sel.value=keep}
+  const opts=users.map(x=>`<option value="${escapeHtml(x.id)}">${escapeHtml(x.name)} (${escapeHtml(x.id)})</option>`).join('');
+  ['#manUser','#pwUser'].forEach(q=>{const el=$(q);if(el){const k=el.value;el.innerHTML=opts;if(k)el.value=k}});
+  const md=$('#manDate');if(md&&!md.value)md.value=todayKey();
   if(rows)rows.innerHTML=users.map(x=>{const k=kasList.find(y=>y.user_id===x.id);const lunas=k?.status==='Lunas';return `<tr><td>${escapeHtml(x.name)}</td><td>${escapeHtml(x.id)}</td><td><span class="pill ${lunas?'green':'red'}">${escapeHtml(k?.status||'Belum bayar')}</span></td><td>${escapeHtml(k?.updated_label||'—')}</td></tr>`}).join('')||'<tr><td colspan="4" class="muted">Belum ada anggota.</td></tr>';
 }
 async function openSession(){
@@ -337,9 +374,8 @@ function drawQR(s){
   if(!s||!s.active||!s.token){img.removeAttribute('src');status.textContent='Sesi ditutup';$('#countdown').textContent='—';return}
   const expires=s.tokenExpiresAt?.toMillis?.()||0;
   const payload=encodeURIComponent(JSON.stringify({sessionId:'current',token:s.token}));
-  let local='';
-  try{if(window.qrcode){const q=window.qrcode(0,'M');q.addData(decodeURIComponent(payload));q.make();local=q.createDataURL(8,2)}}catch(e){console.warn('QR lokal gagal',e)}
-  img.src=local||('https://api.qrserver.com/v1/create-qr-code/?size=320x320&data='+payload);
+  try{img.src=window.AbsenQR.svgDataUrl(decodeURIComponent(payload))}
+  catch(e){console.error('QR gagal dibuat',e);img.removeAttribute('src');status.textContent='QR gagal dibuat. Muat ulang halaman.';return}
   status.textContent=expires>Date.now()?'Sesi online · token berganti':'Memperbarui token…';
   $('#countdown').textContent=Math.max(0,Math.ceil((expires-Date.now())/1000))+' dtk';
 }

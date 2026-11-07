@@ -25,6 +25,28 @@ service cloud.firestore {
       return dx * dx + dy * dy <= r * r;
     }
 
+    function studentAttendOk(d) {
+      return d.user_id == profile().user_id
+        && d.nama == profile().nama
+        && d.session_id == "current"
+        && d.keys().hasAll(["user_id", "nama", "session_id", "qr_token", "created_at", "date", "time", "method", "status", "user_lat", "user_lng", "gps_accuracy", "distance_m"])
+        && d.user_lat is number
+        && d.user_lng is number
+        && d.gps_accuracy is number
+        && d.gps_accuracy <= 150
+        && inRadius(d)
+        && timeOk(d)
+        && get(/databases/$(database)/documents/sessions/current).data.active == true
+        && get(/databases/$(database)/documents/sessions/current).data.token == d.qr_token
+        && get(/databases/$(database)/documents/sessions/current).data.tokenExpiresAt > request.time;
+    }
+    function manualAttendOk(d) {
+      return admin()
+        && d.method == "Manual"
+        && d.status in ["Hadir", "Telat"]
+        && d.keys().hasAll(["user_id", "nama", "date", "time", "method", "status", "created_at"]);
+    }
+
     match /users/{uid} {
       allow read: if signedIn() && (request.auth.uid == uid || admin());
       allow create, delete: if admin();
@@ -41,20 +63,7 @@ service cloud.firestore {
     }
     match /attendances/{id} {
       allow read: if signedIn() && (admin() || self(resource.data.user_id));
-      allow create: if signedIn()
-        && request.resource.data.user_id == profile().user_id
-        && request.resource.data.nama == profile().nama
-        && request.resource.data.session_id == "current"
-        && request.resource.data.keys().hasAll(["user_id", "nama", "session_id", "qr_token", "created_at", "date", "time", "method", "status", "user_lat", "user_lng", "gps_accuracy", "distance_m"])
-        && request.resource.data.user_lat is number
-        && request.resource.data.user_lng is number
-        && request.resource.data.gps_accuracy is number
-        && request.resource.data.gps_accuracy <= 150
-        && inRadius(request.resource.data)
-        && timeOk(request.resource.data)
-        && get(/databases/$(database)/documents/sessions/current).data.active == true
-        && get(/databases/$(database)/documents/sessions/current).data.token == request.resource.data.qr_token
-        && get(/databases/$(database)/documents/sessions/current).data.tokenExpiresAt > request.time;
+      allow create: if signedIn() && (studentAttendOk(request.resource.data) || manualAttendOk(request.resource.data));
       allow update, delete: if admin();
     }
     match /leave_requests/{id} {
