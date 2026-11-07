@@ -5,6 +5,16 @@ service cloud.firestore {
     function profile() { return get(/databases/$(database)/documents/users/$(request.auth.uid)).data; }
     function admin() { return signedIn() && profile().role == "PENGURUS"; }
     function self(userId) { return signedIn() && profile().user_id == userId; }
+    // Jarak (meter) pendekatan datar; cukup akurat untuk area sekolah
+    function inRadius(d) {
+      let s = get(/databases/$(database)/documents/sessions/current).data;
+      let x = s.lat * 0.0174533;
+      let c = 1 - x * x / 2 + x * x * x * x / 24;
+      let dy = (d.user_lat - s.lat) * 111320;
+      let dx = (d.user_lng - s.lng) * 111320 * c;
+      let r = (s.radius is number) ? s.radius : 50;
+      return dx * dx + dy * dy <= r * r;
+    }
 
     match /users/{uid} {
       allow read: if signedIn() && (request.auth.uid == uid || admin());
@@ -26,7 +36,12 @@ service cloud.firestore {
         && request.resource.data.user_id == profile().user_id
         && request.resource.data.nama == profile().nama
         && request.resource.data.session_id == "current"
-        && request.resource.data.keys().hasAll(["user_id", "nama", "session_id", "qr_token", "created_at", "date", "time", "method"])
+        && request.resource.data.keys().hasAll(["user_id", "nama", "session_id", "qr_token", "created_at", "date", "time", "method", "user_lat", "user_lng", "gps_accuracy", "distance_m"])
+        && request.resource.data.user_lat is number
+        && request.resource.data.user_lng is number
+        && request.resource.data.gps_accuracy is number
+        && request.resource.data.gps_accuracy <= 150
+        && inRadius(request.resource.data)
         && get(/databases/$(database)/documents/sessions/current).data.active == true
         && get(/databases/$(database)/documents/sessions/current).data.token == request.resource.data.qr_token
         && get(/databases/$(database)/documents/sessions/current).data.tokenExpiresAt > request.time;

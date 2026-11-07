@@ -27,7 +27,7 @@ async function fsList(name, constraints=[]) {
 async function loadStudentAttendance(id) {
   return fsList('attendances',[where('user_id','==',id)]);
 }
-async function saveAttendanceOnce(u, sessionId, qrToken) {
+async function saveAttendanceOnce(u, sessionId, qrToken, geo) {
   const day=todayKey();
   const attendanceId=`${u.id}_${day}`.replace(/[^A-Za-z0-9_-]/g,'_');
   const ref=doc(db,'attendances',attendanceId);
@@ -39,7 +39,7 @@ async function saveAttendanceOnce(u, sessionId, qrToken) {
     if(!sessionSnap.exists()) throw new Error('Sesi absensi tidak ditemukan.');
     const session=sessionSnap.data();
     if(!session.active || session.token!==qrToken || !session.tokenExpiresAt || session.tokenExpiresAt.toMillis()<=Date.now()) throw new Error('QR kedaluwarsa atau sudah diganti. Pindai ulang.');
-    tx.set(ref,{user_id:u.id,nama:u.name,session_id:sessionId,qr_token:qrToken,created_at:serverTimestamp(),date:day,time:new Date().toLocaleTimeString('id-ID',{hour:'2-digit',minute:'2-digit'}),method:'QR'});
+    tx.set(ref,{user_id:u.id,nama:u.name,session_id:sessionId,qr_token:qrToken,created_at:serverTimestamp(),date:day,time:new Date().toLocaleTimeString('id-ID',{hour:'2-digit',minute:'2-digit'}),method:'QR',user_lat:geo.lat,user_lng:geo.lng,gps_accuracy:Math.round(geo.acc),distance_m:Math.round(geo.dist)});
     return true;
   });
 }
@@ -48,25 +48,38 @@ async function loadProfile(uid){const snap=await getDoc(doc(db,'users',uid));if(
 function login(){seed();initTheme();$('#loginForm')?.addEventListener('submit',async e=>{e.preventDefault();const id=$('#idUnik').value.trim().toUpperCase();const password=$('#loginPassword').value;if(!/^[A-Z0-9_-]{2,50}$/.test(id)){toast('Format ID tidak valid.');return}const submit=$('#loginForm button[type=submit]');if(submit)submit.disabled=true;try{const cred=await signInWithEmailAndPassword(auth,idToEmail(id),password);const profile=await loadProfile(cred.user.uid);if(profile.id!==id)throw new Error('ID akun tidak cocok dengan profil.');put(DB.session,{...profile,authUid:cred.user.uid});location.href=profile.role==='pengurus'?'dashboard-pengurus.html':'dashboard-siswa.html';}catch(err){console.error(err);toast(err.code==='auth/invalid-credential'?'ID atau password salah.':err.message||'Login gagal.')}finally{if(submit)submit.disabled=false}});onAuthStateChanged(auth,async u=>{if(u&&document.body.dataset.page==='login'){try{const profile=await loadProfile(u.uid);put(DB.session,{...profile,authUid:u.uid});location.href=profile.role==='pengurus'?'dashboard-pengurus.html':'dashboard-siswa.html'}catch(e){console.warn(e)}}});}
 async function student(){seed();const u=requireUser('siswa');if(!u)return;bindCommon();$('#userName').textContent=u.name.split(' ')[0]+'!';$('#userFull').textContent=u.name;$('#dateToday').textContent=dateLabel();$('#kasStatus').textContent=statusKas(u.id);let logs=[];try{logs=(await loadStudentAttendance(u.id)).map(x=>({...x,id:x.user_id,timestamp:x.created_at?.toMillis?.()||0})).sort((a,b)=>b.timestamp-a.timestamp)}catch(e){console.error(e);toast('Gagal memuat absensi dari Firestore: '+(e.message||''))}$('#attendanceCount').textContent=logs.length;$('#lastAttendance').textContent=logs[0]?.time||'—';let mine=[];try{mine=(await fsList('leave_requests',[where('user_id','==',u.id)])).sort((a,b)=>(b.created_at?.toMillis?.()||0)-(a.created_at?.toMillis?.()||0));}catch(e){console.error(e);toast('Gagal memuat pengajuan izin: '+(e.message||''))}$('#izinStatus').textContent=mine[0]?.status||'Belum ada';const history=$('#historyRows');history.innerHTML=logs.length?logs.slice(0,8).map(x=>`<tr><td>${x.date}</td><td>${x.time}</td><td><span class="pill green">Hadir</span></td><td>${x.method||'QR'}</td></tr>`).join(''):'<tr><td colspan="4" class="muted">Belum ada riwayat absensi.</td></tr>';const izinRows=$('#izinRows');if(izinRows)izinRows.innerHTML=mine.length?mine.slice(0,5).map(x=>`<tr><td>${x.date}</td><td>${x.reason}</td><td><span class="pill ${x.status==='Disetujui'?'green':x.status==='Ditolak'?'red':''}">${x.status}</span></td></tr>`).join(''):'<tr><td colspan="3" class="muted">Belum ada pengajuan izin.</td></tr>';$('#izinForm')?.addEventListener('submit',async e=>{e.preventDefault();const date=$('#izinDate').value,reason=$('#izinReason').value.trim(),detail=$('#izinDetail').value.trim();if(!date||!reason){toast('Tanggal dan alasan wajib diisi.');return}const btn=$('#izinForm button[type=submit]');if(btn)btn.disabled=true;try{await addDoc(collection(db,'leave_requests'),{user_id:u.id,nama:u.name,date,reason,detail,status:'Menunggu',created_at:serverTimestamp()});toast('Pengajuan izin berhasil dikirim ke Firestore.');setTimeout(()=>location.reload(),650)}catch(err){console.error(err);toast('Gagal mengirim izin: '+(err.message||'Periksa Firestore Rules.'))}finally{if(btn)btn.disabled=false}});$('#scanBtn')?.addEventListener('click',scanQR);$('#manualAttendance')?.addEventListener('click',()=>toast('Absensi hanya dapat diproses melalui QR sesi aktif dan validasi lokasi.'));const notifyBtn=$('#enableNotifications'),notifyState=$('#notificationState');if(notifyBtn&&notifyState){notifyState.textContent=('Notification' in window)?(Notification.permission==='granted'?'Notifikasi diizinkan':Notification.permission==='denied'?'Izin diblokir':'Belum diaktifkan'):'Browser tidak mendukung';notifyBtn.addEventListener('click',async()=>{if(!('Notification' in window)){toast('Browser ini tidak mendukung notifikasi.');return}let permission=Notification.permission;if(permission==='default')permission=await Notification.requestPermission();notifyState.textContent=permission==='granted'?'Notifikasi diizinkan':permission==='denied'?'Izin diblokir':'Belum diizinkan';if(permission==='granted'){if(navigator.serviceWorker?.controller){navigator.serviceWorker.ready.then(reg=>reg.showNotification('AbsenIn',{body:'Notifikasi berhasil diaktifkan di perangkat ini.',tag:'absenin-test',icon:'./icon-192.png'}))}else new Notification('AbsenIn',{body:'Notifikasi berhasil diaktifkan di perangkat ini.'});toast('Notifikasi browser diaktifkan di perangkat ini.')}})}}
 async function scanQR(){const box=$('#scannerBox');box.classList.remove('hidden');if(!window.Html5Qrcode){toast('Modul pemindai belum termuat. Periksa koneksi internet.');return}if(window.qrScanner){try{await window.qrScanner.stop()}catch{}}window.qrScanner=new Html5Qrcode('qr-reader');try{await window.qrScanner.start({facingMode:'environment'},{fps:10,qrbox:{width:230,height:230}},async text=>{try{await window.qrScanner.stop()}catch{};processQR(text)})}catch(e){toast('Kamera tidak tersedia. Izinkan akses kamera dan gunakan HTTPS.')}}
+function getFreshPosition(){
+  return new Promise((ok,no)=>navigator.geolocation.getCurrentPosition(ok,no,{enableHighAccuracy:true,timeout:15000,maximumAge:0}));
+}
 async function processQR(raw){
   let payload;try{payload=JSON.parse(raw)}catch{toast('QR tidak valid.');return}
   if(payload.sessionId!=='current'||!payload.token){toast('QR tidak valid.');return}
   const u=user();
   if(!u){toast('Silakan login ulang.');return}
-  if(!navigator.geolocation){toast('Browser tidak mendukung validasi lokasi.');return}
+  if(!navigator.geolocation){toast('Absen wajib memakai lokasi, tetapi browser ini tidak mendukungnya.');return}
   try{
     const snap=await getDoc(doc(db,'sessions','current'));
     if(!snap.exists()) throw new Error('Belum ada sesi absensi aktif.');
     const sess=snap.data();
     if(!sess.active||sess.token!==payload.token||!sess.tokenExpiresAt||sess.tokenExpiresAt.toMillis()<=Date.now()) throw new Error('QR kedaluwarsa atau bukan sesi aktif. Pindai ulang.');
-    navigator.geolocation.getCurrentPosition(async pos=>{
-      const dist=distance(pos.coords.latitude,pos.coords.longitude,sess.lat,sess.lng);
-      if(dist>50){toast(`Di luar radius absensi (${Math.round(dist)} m).`);return}
-      try{const ok=await saveAttendanceOnce(u,'current',payload.token);if(!ok){toast('Kamu sudah tercatat hadir hari ini.');return}toast('Absensi berhasil disimpan ke Firestore!');setTimeout(()=>location.reload(),900)}catch(e){console.error(e);toast(e.message||'Gagal menyimpan absensi.')}
-    },()=>toast('Izin lokasi diperlukan untuk absensi.'),{enableHighAccuracy:true,timeout:10000});
+    const radius=Number.isFinite(sess.radius)?sess.radius:50;
+    let pos;
+    try{pos=await getFreshPosition()}
+    catch(err){
+      toast(err.code===1?'Lokasi dimatikan atau ditolak. Aktifkan lokasi lalu pindai ulang. Tanpa lokasi, absen tidak tercatat hadir.':'Lokasi belum terbaca. Aktifkan GPS, pindah ke tempat terbuka, lalu pindai ulang.');
+      return;
+    }
+    const geo={lat:pos.coords.latitude,lng:pos.coords.longitude,acc:pos.coords.accuracy};
+    geo.dist=distance(geo.lat,geo.lng,sess.lat,sess.lng);
+    if(geo.acc>150){toast(`Sinyal GPS lemah (±${Math.round(geo.acc)} m). Pindah ke tempat terbuka lalu pindai ulang.`);return}
+    if(geo.dist>radius){
+      try{await addDoc(collection(db,'system_logs'),{user_id:u.id,timestamp:serverTimestamp(),action_type:'OUT_OF_RADIUS',coords_data:{lat:geo.lat,lng:geo.lng,accuracy:Math.round(geo.acc),distance_m:Math.round(geo.dist),radius_m:radius}})}catch{}
+      toast(`Kamu di luar area absen (${Math.round(geo.dist)} m, batas ${radius} m). Tidak tercatat hadir. Ada keperluan? Ajukan izin.`);
+      return;
+    }
+    try{const ok=await saveAttendanceOnce(u,'current',payload.token,geo);if(!ok){toast('Kamu sudah tercatat hadir hari ini.');return}toast('Absensi berhasil disimpan!');setTimeout(()=>location.reload(),900)}catch(e){console.error(e);toast(e.message||'Gagal menyimpan absensi.')}
   }catch(e){console.error(e);toast(e.message||'Gagal memeriksa sesi QR.')}
 }
-
 function distance(a,b,c,d){const r=x=>x*Math.PI/180;let x=r(c-a),y=r(d-b),z=Math.sin(x/2)**2+Math.cos(r(a))*Math.cos(r(c))*Math.sin(y/2)**2;return 6371000*2*Math.atan2(Math.sqrt(z),Math.sqrt(1-z))}
 function makeTempPassword(){const chars='ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz23456789!@#';const bytes=new Uint8Array(14);crypto.getRandomValues(bytes);return Array.from(bytes,b=>chars[b%chars.length]).join('')}
 async function admin(){
@@ -200,12 +213,13 @@ function renderIzin(izin=[]){
 function escapeHtml(value){return String(value??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));}
 function renderKas(){const users=get(DB.users,[]).filter(x=>x.role==='siswa'),kas=get(DB.kas,[]);$('#kasUser').innerHTML=users.map(x=>`<option value="${x.id}">${x.name} (${x.id})</option>`).join('');$('#kasRows').innerHTML=users.map(x=>{let k=kas.find(y=>y.id===x.id);return `<tr><td>${x.name}</td><td>${x.id}</td><td><span class="pill ${k?.status==='Lunas'?'green':'red'}">${k?.status||'Belum bayar'}</span></td><td>${k?.updated||'—'}</td></tr>`}).join('')}
 async function openSession(){
-  const lat=Number($('#sessionLat').value),lng=Number($('#sessionLng').value);
-  if(!Number.isFinite(lat)||!Number.isFinite(lng)||Math.abs(lat)>90||Math.abs(lng)>180){toast('Masukkan koordinat lokasi yang valid.');return}
+  const lat=Number($('#sessionLat').value),lng=Number($('#sessionLng').value),radius=Math.round(Number($('#sessionRadius')?.value||100));
+  if(!Number.isFinite(lat)||!Number.isFinite(lng)||Math.abs(lat)>90||Math.abs(lng)>180){toast('Pilih lokasi di peta atau tekan Pakai lokasi saya.');return}
+  if(!Number.isFinite(radius)||radius<20||radius>500){toast('Radius harus 20 sampai 500 meter.');return}
   const win=window.open('verifikasi.html','_blank');
   try{
     const now=Date.now(),token=crypto.randomUUID();
-    await setDoc(doc(db,'sessions','current'),{sessionId:'current',token,lat,lng,active:true,createdAt:serverTimestamp(),tokenExpiresAt:Timestamp.fromMillis(now+30000),updatedAt:serverTimestamp()});
+    await setDoc(doc(db,'sessions','current'),{sessionId:'current',token,lat,lng,radius,active:true,createdAt:serverTimestamp(),tokenExpiresAt:Timestamp.fromMillis(now+30000),updatedAt:serverTimestamp()});
     toast('Sesi QR online aktif.');
     if(!win) toast('Izinkan pop-up untuk membuka layar QR.');
   }catch(e){if(win)win.close();console.error(e);toast('Gagal membuka sesi: '+(e.message||'Periksa Firestore Rules.'))}
