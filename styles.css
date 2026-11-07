@@ -55,3 +55,5 @@ button.pfp{border:0;cursor:pointer}
 .sheet-hr{border:0;border-top:1px solid var(--line);margin:16px 0 12px}
 .sheet-row{display:flex;gap:8px;flex-wrap:wrap;margin-top:14px}
 .info-rows{margin-top:14px}.info-rows div{display:flex;justify-content:space-between;padding:9px 0;border-top:1px solid var(--line);font-size:13px}.info-rows span{color:var(--muted)}
+
+#qrImage{-webkit-user-select:none;user-select:none;-webkit-touch-callout:none}

@@ -73,7 +73,7 @@ service cloud.firestore {
       allow delete: if admin();
     }
     match /kas_transactions/{id} {
-      allow read: if signedIn() && (admin() || self(resource.data.user_id));
+      allow read: if admin() || (signedIn() && profile().user_id == id);
       allow write: if admin();
     }
     match /system_logs/{id} {

@@ -46,7 +46,7 @@ async function saveAttendanceOnce(u, sessionId, qrToken, geo) {
 
 async function loadProfile(uid){const snap=await getDoc(doc(db,'users',uid));if(!snap.exists())throw new Error('Profil belum terdaftar di Firestore. Hubungi pengurus.');const d=snap.data();return {uid,id:d.user_id||d.userId||'',name:d.nama||d.nama_lengkap||d.name||'',role:String(d.role||'SISWA').toLowerCase()==='pengurus'?'pengurus':'siswa',kelas:d.kelas||'Anggota Robotik'};}
 function login(){seed();initTheme();$('#loginForm')?.addEventListener('submit',async e=>{e.preventDefault();const id=$('#idUnik').value.trim().toUpperCase();const password=$('#loginPassword').value;if(!/^[A-Z0-9_-]{2,50}$/.test(id)){toast('Format ID tidak valid.');return}const submit=$('#loginForm button[type=submit]');if(submit)submit.disabled=true;try{const cred=await signInWithEmailAndPassword(auth,idToEmail(id),password);const profile=await loadProfile(cred.user.uid);if(profile.id!==id)throw new Error('ID akun tidak cocok dengan profil.');put(DB.session,{...profile,authUid:cred.user.uid});location.href=profile.role==='pengurus'?'dashboard-pengurus.html':'dashboard-siswa.html';}catch(err){console.error(err);toast(err.code==='auth/invalid-credential'?'ID atau password salah.':err.message||'Login gagal.')}finally{if(submit)submit.disabled=false}});onAuthStateChanged(auth,async u=>{if(u&&document.body.dataset.page==='login'){try{const profile=await loadProfile(u.uid);put(DB.session,{...profile,authUid:u.uid});location.href=profile.role==='pengurus'?'dashboard-pengurus.html':'dashboard-siswa.html'}catch(e){console.warn(e)}}});}
-async function student(){seed();const u=requireUser('siswa');if(!u)return;bindCommon();$('#userName').textContent=u.name.split(' ')[0]+'!';$('#userFull').textContent=u.name;$('#dateToday').textContent=dateLabel();$('#kasStatus').textContent=statusKas(u.id);let logs=[];try{logs=(await loadStudentAttendance(u.id)).map(x=>({...x,id:x.user_id,timestamp:x.created_at?.toMillis?.()||0})).sort((a,b)=>b.timestamp-a.timestamp)}catch(e){console.error(e);toast('Gagal memuat absensi dari Firestore: '+(e.message||''))}$('#attendanceCount').textContent=logs.length;$('#lastAttendance').textContent=logs[0]?.time||'—';let mine=[];try{mine=(await fsList('leave_requests',[where('user_id','==',u.id)])).sort((a,b)=>(b.created_at?.toMillis?.()||0)-(a.created_at?.toMillis?.()||0));}catch(e){console.error(e);toast('Gagal memuat pengajuan izin: '+(e.message||''))}$('#izinStatus').textContent=mine[0]?.status||'Belum ada';const history=$('#historyRows');history.innerHTML=logs.length?logs.slice(0,8).map(x=>`<tr><td>${x.date}</td><td>${x.time}</td><td><span class="pill ${x.status==='Telat'?'':'green'}">${x.status||'Hadir'}</span></td><td>${x.method||'QR'}</td></tr>`).join(''):'<tr><td colspan="4" class="muted">Belum ada riwayat absensi.</td></tr>';const izinRows=$('#izinRows');if(izinRows)izinRows.innerHTML=mine.length?mine.slice(0,5).map(x=>`<tr><td>${x.date}</td><td>${x.reason}</td><td><span class="pill ${x.status==='Disetujui'?'green':x.status==='Ditolak'?'red':''}">${x.status}</span></td></tr>`).join(''):'<tr><td colspan="3" class="muted">Belum ada pengajuan izin.</td></tr>';$('#izinForm')?.addEventListener('submit',async e=>{e.preventDefault();const date=$('#izinDate').value,reason=$('#izinReason').value.trim(),detail=$('#izinDetail').value.trim();if(!date||!reason){toast('Tanggal dan alasan wajib diisi.');return}const btn=$('#izinForm button[type=submit]');if(btn)btn.disabled=true;try{await addDoc(collection(db,'leave_requests'),{user_id:u.id,nama:u.name,date,reason,detail,status:'Menunggu',created_at:serverTimestamp()});toast('Pengajuan izin berhasil dikirim ke Firestore.');setTimeout(()=>location.reload(),650)}catch(err){console.error(err);toast('Gagal mengirim izin: '+(err.message||'Periksa Firestore Rules.'))}finally{if(btn)btn.disabled=false}});$('#scanBtn')?.addEventListener('click',scanQR);$('#manualAttendance')?.addEventListener('click',()=>toast('Absensi hanya dapat diproses melalui QR sesi aktif dan validasi lokasi.'));const notifyBtn=$('#enableNotifications'),notifyState=$('#notificationState');if(notifyBtn&&notifyState){notifyState.textContent=('Notification' in window)?(Notification.permission==='granted'?'Notifikasi diizinkan':Notification.permission==='denied'?'Izin diblokir':'Belum diaktifkan'):'Browser tidak mendukung';notifyBtn.addEventListener('click',async()=>{if(!('Notification' in window)){toast('Browser ini tidak mendukung notifikasi.');return}let permission=Notification.permission;if(permission==='default')permission=await Notification.requestPermission();notifyState.textContent=permission==='granted'?'Notifikasi diizinkan':permission==='denied'?'Izin diblokir':'Belum diizinkan';if(permission==='granted'){if(navigator.serviceWorker?.controller){navigator.serviceWorker.ready.then(reg=>reg.showNotification('AbsenIn',{body:'Notifikasi berhasil diaktifkan di perangkat ini.',tag:'absenin-test',icon:'./icon-192.png'}))}else new Notification('AbsenIn',{body:'Notifikasi berhasil diaktifkan di perangkat ini.'});toast('Notifikasi browser diaktifkan di perangkat ini.')}})}}
+async function student(){seed();const u=requireUser('siswa');if(!u)return;bindCommon();$('#userName').textContent=u.name.split(' ')[0]+'!';$('#userFull').textContent=u.name;$('#dateToday').textContent=dateLabel();{let kasText='Belum bayar';try{const k=await getDoc(doc(db,'kas_transactions',u.id));if(k.exists())kasText=k.data().status||kasText}catch(e){console.warn('kas',e)}$('#kasStatus').textContent=kasText}let logs=[];try{logs=(await loadStudentAttendance(u.id)).map(x=>({...x,id:x.user_id,timestamp:x.created_at?.toMillis?.()||0})).sort((a,b)=>b.timestamp-a.timestamp)}catch(e){console.error(e);toast('Gagal memuat absensi dari Firestore: '+(e.message||''))}$('#attendanceCount').textContent=logs.length;$('#lastAttendance').textContent=logs[0]?.time||'—';let mine=[];try{mine=(await fsList('leave_requests',[where('user_id','==',u.id)])).sort((a,b)=>(b.created_at?.toMillis?.()||0)-(a.created_at?.toMillis?.()||0));}catch(e){console.error(e);toast('Gagal memuat pengajuan izin: '+(e.message||''))}$('#izinStatus').textContent=mine[0]?.status||'Belum ada';const history=$('#historyRows');history.innerHTML=logs.length?logs.slice(0,8).map(x=>`<tr><td>${x.date}</td><td>${x.time}</td><td><span class="pill ${x.status==='Telat'?'':'green'}">${x.status||'Hadir'}</span></td><td>${x.method||'QR'}</td></tr>`).join(''):'<tr><td colspan="4" class="muted">Belum ada riwayat absensi.</td></tr>';const izinRows=$('#izinRows');if(izinRows)izinRows.innerHTML=mine.length?mine.slice(0,5).map(x=>`<tr><td>${x.date}</td><td>${x.reason}</td><td><span class="pill ${x.status==='Disetujui'?'green':x.status==='Ditolak'?'red':''}">${x.status}</span></td></tr>`).join(''):'<tr><td colspan="3" class="muted">Belum ada pengajuan izin.</td></tr>';$('#izinForm')?.addEventListener('submit',async e=>{e.preventDefault();const date=$('#izinDate').value,reason=$('#izinReason').value.trim(),detail=$('#izinDetail').value.trim();if(!date||!reason){toast('Tanggal dan alasan wajib diisi.');return}const btn=$('#izinForm button[type=submit]');if(btn)btn.disabled=true;try{await addDoc(collection(db,'leave_requests'),{user_id:u.id,nama:u.name,date,reason,detail,status:'Menunggu',created_at:serverTimestamp()});toast('Pengajuan izin berhasil dikirim ke Firestore.');setTimeout(()=>location.reload(),650)}catch(err){console.error(err);toast('Gagal mengirim izin: '+(err.message||'Periksa Firestore Rules.'))}finally{if(btn)btn.disabled=false}});$('#scanBtn')?.addEventListener('click',scanQR);$('#manualAttendance')?.addEventListener('click',()=>toast('Absensi hanya dapat diproses melalui QR sesi aktif dan validasi lokasi.'));const notifyBtn=$('#enableNotifications'),notifyState=$('#notificationState');if(notifyBtn&&notifyState){notifyState.textContent=('Notification' in window)?(Notification.permission==='granted'?'Notifikasi diizinkan':Notification.permission==='denied'?'Izin diblokir':'Belum diaktifkan'):'Browser tidak mendukung';notifyBtn.addEventListener('click',async()=>{if(!('Notification' in window)){toast('Browser ini tidak mendukung notifikasi.');return}let permission=Notification.permission;if(permission==='default')permission=await Notification.requestPermission();notifyState.textContent=permission==='granted'?'Notifikasi diizinkan':permission==='denied'?'Izin diblokir':'Belum diizinkan';if(permission==='granted'){if(navigator.serviceWorker?.controller){navigator.serviceWorker.ready.then(reg=>reg.showNotification('AbsenIn',{body:'Notifikasi berhasil diaktifkan di perangkat ini.',tag:'absenin-test',icon:'./icon-192.png'}))}else new Notification('AbsenIn',{body:'Notifikasi berhasil diaktifkan di perangkat ini.'});toast('Notifikasi browser diaktifkan di perangkat ini.')}})}}
 async function scanQR(){const box=$('#scannerBox');box.classList.remove('hidden');if(!window.Html5Qrcode){toast('Modul pemindai belum termuat. Periksa koneksi internet.');return}if(window.qrScanner){try{await window.qrScanner.stop()}catch{}}window.qrScanner=new Html5Qrcode('qr-reader');try{await window.qrScanner.start({facingMode:'environment'},{fps:10,qrbox:{width:230,height:230}},async text=>{try{await window.qrScanner.stop()}catch{};processQR(text)})}catch(e){toast('Kamera tidak tersedia. Izinkan akses kamera dan gunakan HTTPS.')}}
 function wibMin(){const d=new Date(Date.now()+7*3600000);return d.getUTCHours()*60+d.getUTCMinutes()}
 function hm(m){return String(Math.floor(m/60)).padStart(2,'0')+':'+String(m%60).padStart(2,'0')}
@@ -103,12 +103,13 @@ async function admin(){
   bindCommon();
   $('#dateToday').textContent=dateLabel();
   
-  let users=[],logs=[],izin=[],outs=[],sess=null;
+  let users=[],logs=[],izin=[],outs=[],sess=null,kasList=[];
   try {
     users=(await fsList('users')).filter(x=>String(x.role).toUpperCase()==='SISWA').map(x=>({...x,id:x.user_id,name:x.nama||x.nama_lengkap||x.name||'',role:'siswa'}));
     logs=(await fsList('attendances')).map(x=>({...x,id:x.user_id,name:x.nama,date:x.date||'',time:x.time||'',timestamp:x.created_at?.toMillis?.()||0,method:x.method||'QR'}));
     izin=await fsList('leave_requests');
     try{outs=await fsList('system_logs')}catch(e){console.warn(e)}
+    try{kasList=await fsList('kas_transactions')}catch(e){console.warn(e);toast('Gagal memuat data kas: '+(e.message||''))}
     try{const ss=await getDoc(doc(db,'sessions','current'));if(ss.exists())sess=ss.data()}catch(e){console.warn(e)}
   } catch(e) {
     console.error(e);
@@ -124,20 +125,24 @@ async function admin(){
   $('#logRows').innerHTML=logs.slice().sort((a,b)=>b.timestamp-a.timestamp).slice(0,12).map(x=>`<tr><td>${x.name}</td><td>${x.date}</td><td>${x.time}</td><td><span class="pill ${x.status==='Telat'?'':'green'}">${x.status||'Hadir'}</span></td></tr>`).join('')||'<tr><td colspan="4" class="muted">Belum ada absensi tercatat.</td></tr>';
   
   renderIzin(izin);
-  renderKas();
+  renderKas(users,kasList);
   renderRecap(users,logs,izin,outs,sess);
   try{const j=JSON.parse(localStorage.getItem('absenin_jam')||'null');if(j){['sessionOpen','sessionOnTime','sessionClose'].forEach((id,i)=>{const el=$('#'+id);if(el)el.value=j[i]||''})}}catch{}
   
   $('#openSession')?.addEventListener('click',openSession);
   
-  $('#kasForm')?.addEventListener('submit',e=>{
+  $('#kasForm')?.addEventListener('submit',async e=>{
     e.preventDefault();
-    let id=$('#kasUser').value,st=$('#kasValue').value;
-    let arr=get(DB.kas,[]).filter(x=>x.id!==id);
-    arr.push({id,status:st,updated:dateLabel()});
-    put(DB.kas,arr);
-    toast('Status kas diperbarui.');
-    renderKas();
+    const id=$('#kasUser').value,st=$('#kasValue').value;
+    const m=users.find(x=>x.id===id);
+    if(!id||!m){toast('Pilih anggota dulu.');return}
+    const btn=$('#kasForm button[type=submit]');if(btn)btn.disabled=true;
+    try{
+      await setDoc(doc(db,'kas_transactions',id),{user_id:id,nama:m.name,status:st,updated_label:dateLabel(),updated_at:serverTimestamp()});
+      kasList=kasList.filter(x=>x.user_id!==id);kasList.push({user_id:id,nama:m.name,status:st,updated_label:dateLabel()});
+      toast('Status kas disimpan.');renderKas(users,kasList);
+    }catch(err){console.error(err);toast('Gagal menyimpan kas: '+(err.message||'Periksa Firestore Rules.'))}
+    finally{if(btn)btn.disabled=false}
   });
 
   $('#addUserForm')?.addEventListener('submit', async e => {
@@ -240,7 +245,12 @@ function renderIzin(izin=[]){
   body.querySelectorAll('[data-izin-id]').forEach(btn=>btn.addEventListener('click',async()=>{btn.disabled=true;try{await updateDoc(doc(db,'leave_requests',btn.dataset.izinId),{status:btn.dataset.izinStatus,reviewed_at:serverTimestamp(),reviewed_by:user()?.id||''});toast('Status izin diperbarui: '+btn.dataset.izinStatus);const fresh=await fsList('leave_requests');renderIzin(fresh);$('#pendingCount').textContent=fresh.filter(x=>x.status==='Menunggu').length}catch(e){console.error(e);toast('Gagal memperbarui izin: '+(e.message||''));btn.disabled=false}}));
 }
 function escapeHtml(value){return String(value??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));}
-function renderKas(){const users=get(DB.users,[]).filter(x=>x.role==='siswa'),kas=get(DB.kas,[]);$('#kasUser').innerHTML=users.map(x=>`<option value="${x.id}">${x.name} (${x.id})</option>`).join('');$('#kasRows').innerHTML=users.map(x=>{let k=kas.find(y=>y.id===x.id);return `<tr><td>${x.name}</td><td>${x.id}</td><td><span class="pill ${k?.status==='Lunas'?'green':'red'}">${k?.status||'Belum bayar'}</span></td><td>${k?.updated||'—'}</td></tr>`}).join('')}
+function renderKas(users=[],kasList=[]){
+  const sel=$('#kasUser'),rows=$('#kasRows');
+  const keep=sel?.value;
+  if(sel){sel.innerHTML=users.map(x=>`<option value="${escapeHtml(x.id)}">${escapeHtml(x.name)} (${escapeHtml(x.id)})</option>`).join('');if(keep)sel.value=keep}
+  if(rows)rows.innerHTML=users.map(x=>{const k=kasList.find(y=>y.user_id===x.id);const lunas=k?.status==='Lunas';return `<tr><td>${escapeHtml(x.name)}</td><td>${escapeHtml(x.id)}</td><td><span class="pill ${lunas?'green':'red'}">${escapeHtml(k?.status||'Belum bayar')}</span></td><td>${escapeHtml(k?.updated_label||'—')}</td></tr>`}).join('')||'<tr><td colspan="4" class="muted">Belum ada anggota.</td></tr>';
+}
 async function openSession(){
   const lat=Number($('#sessionLat').value),lng=Number($('#sessionLng').value),radius=Math.round(Number($('#sessionRadius')?.value||100));
   if(!Number.isFinite(lat)||!Number.isFinite(lng)||Math.abs(lat)>90||Math.abs(lng)>180){toast('Pilih lokasi di peta atau tekan Pakai lokasi saya.');return}
@@ -251,6 +261,7 @@ async function openSession(){
     const o=toMin(oIn),t=toMin(tIn),c=toMin(cIn);
     if(o==null||t==null||c==null){toast('Isi ketiga jam (dibuka, batas tepat waktu, ditutup) atau kosongkan semuanya.');return}
     if(!(o<=t&&t<=c)){toast('Urutan jam harus: dibuka ≤ batas tepat waktu ≤ ditutup.');return}
+    if(c<=wibMin()){toast('Jam ditutup sudah lewat hari ini. Atur jam yang masih ke depan.');return}
     Object.assign(timeFields,{openMin:o,onTimeMin:t,closeMin:c});
   }
   try{localStorage.setItem('absenin_jam',JSON.stringify([oIn,tIn,cIn]))}catch{}
@@ -267,13 +278,28 @@ function tv(){
   initTheme();$('#tvDate').textContent=dateLabel();
   $('#refreshSession')?.addEventListener('click',rotate);
   $('#closeSession')?.addEventListener('click',closeSession);
-  const lat=$('#tvLat'),lng=$('#tvLng');
-  if(lat)lat.value='';if(lng)lng.value='';
   stopSessionListener=onSnapshot(doc(db,'sessions','current'),snap=>{
     if(!snap.exists()){drawQR(null);return}
     const s=snap.data();drawQR(s);
   },err=>{console.error(err);toast('Tidak bisa membaca sesi Firestore: '+err.message)});
-  qrRotateTimer=setInterval(()=>{const s=window.currentQrSession;if(s?.active&&s.tokenExpiresAt?.toMillis?.()<=Date.now())rotate()},1000);
+  const qi=$('#qrImage');if(qi){qi.setAttribute('draggable','false');qi.addEventListener('contextmenu',e=>e.preventDefault())}
+  qrRotateTimer=setInterval(()=>tickQr(window.currentQrSession),1000);
+}
+let autoClosing=false;
+function tickQr(s){
+  if(!s||!s.active)return;
+  const cd=$('#countdown'),st=$('#qrStatus');
+  const exp=s.tokenExpiresAt?.toMillis?.()||0;
+  if(cd)cd.textContent=Math.max(0,Math.ceil((exp-Date.now())/1000))+' dtk';
+  if(Number.isFinite(s.closeMin)){
+    const n=wibMin();
+    if(n>s.closeMin){
+      if(!autoClosing){autoClosing=true;closeSession().finally(()=>{autoClosing=false})}
+      return;
+    }
+    if(st)st.textContent=n<s.openMin?`Absen dibuka pukul ${hm(s.openMin)} WIB`:`Sesi online · ditutup otomatis ${hm(s.closeMin)} WIB`;
+  }
+  if(exp<=Date.now())rotate();
 }
 async function rotate(){
   if(sessionRotationBusy)return;sessionRotationBusy=true;
@@ -287,18 +313,55 @@ async function rotate(){
 async function closeSession(){
   try{await updateDoc(doc(db,'sessions','current'),{active:false,token:'',tokenExpiresAt:Timestamp.fromMillis(0),closedAt:serverTimestamp()});toast('Sesi QR ditutup untuk semua perangkat.')}catch(e){console.error(e);toast('Gagal menutup sesi: '+e.message)}
 }
+let tvMapObj=null,tvLayer=null;
+function showSessionLoc(s){
+  const la=$('#tvLat'),lo=$('#tvLng'),ra=$('#tvRad');
+  if(!s||!Number.isFinite(s.lat)||!Number.isFinite(s.lng)){if(la)la.value='';if(lo)lo.value='';if(ra)ra.value='';return}
+  const radius=Number.isFinite(s.radius)?s.radius:50;
+  if(la)la.value=s.lat.toFixed(6);if(lo)lo.value=s.lng.toFixed(6);if(ra)ra.value=radius+' meter';
+  const box=$('#tvMap');if(!box||!window.L)return;
+  if(!tvMapObj){
+    tvMapObj=L.map(box,{zoomControl:false,dragging:false,scrollWheelZoom:false,touchZoom:false,doubleClickZoom:false,boxZoom:false,keyboard:false});
+    L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png',{maxZoom:19,attribution:'© OpenStreetMap'}).addTo(tvMapObj);
+  }
+  if(tvLayer)tvLayer.remove();
+  const c=L.circle([s.lat,s.lng],{radius,color:'#f59b22',fillOpacity:.15});
+  const m=L.marker([s.lat,s.lng]);
+  tvLayer=L.layerGroup([c,m]).addTo(tvMapObj);
+  tvMapObj.fitBounds(c.getBounds(),{padding:[10,10],animate:false});
+  setTimeout(()=>tvMapObj.invalidateSize(),200);
+}
 function drawQR(s){
-  window.currentQrSession=s;
+  window.currentQrSession=s;showSessionLoc(s);
   const img=$('#qrImage'),status=$('#qrStatus');
   if(!s||!s.active||!s.token){img.removeAttribute('src');status.textContent='Sesi ditutup';$('#countdown').textContent='—';return}
   const expires=s.tokenExpiresAt?.toMillis?.()||0;
   const payload=encodeURIComponent(JSON.stringify({sessionId:'current',token:s.token}));
-  img.src='https://api.qrserver.com/v1/create-qr-code/?size=320x320&data='+payload;
+  let local='';
+  try{if(window.qrcode){const q=window.qrcode(0,'M');q.addData(decodeURIComponent(payload));q.make();local=q.createDataURL(8,2)}}catch(e){console.warn('QR lokal gagal',e)}
+  img.src=local||('https://api.qrserver.com/v1/create-qr-code/?size=320x320&data='+payload);
   status.textContent=expires>Date.now()?'Sesi online · token berganti':'Memperbarui token…';
   $('#countdown').textContent=Math.max(0,Math.ceil((expires-Date.now())/1000))+' dtk';
 }
 
-function exportCSV(){let logs=get(DB.logs,[]),csv='Nama,ID,Tanggal,Waktu,Metode\n'+logs.map(x=>[x.name,x.id,x.date,x.time,x.method].map(v=>'"'+String(v||'').replaceAll('"','""')+'"').join(',')).join('\n');let a=document.createElement('a');a.href=URL.createObjectURL(new Blob([csv],{type:'text/csv'}));a.download='rekap-absensi.csv';a.click();URL.revokeObjectURL(a.href)}
+async function exportCSV(){
+  try{
+    toast('Menyiapkan CSV...');
+    const att=await fsList('attendances'),izin=await fsList('leave_requests');
+    const rows=[];
+    att.forEach(x=>rows.push({date:x.date||'',id:x.user_id||'',name:x.nama||'',time:x.time||'',status:x.status||'Hadir',method:x.method||'QR',dist:x.distance_m??'',acc:x.gps_accuracy??'',note:''}));
+    izin.filter(x=>x.status==='Disetujui').forEach(x=>rows.push({date:x.date||'',id:x.user_id||'',name:x.nama||'',time:'',status:'Izin',method:'Izin',dist:'',acc:'',note:x.reason||''}));
+    rows.sort((p,q)=>String(q.date).localeCompare(String(p.date))||String(p.name).localeCompare(String(q.name)));
+    const q=v=>{let s=String(v??'');if(/^[=+\-@]/.test(s))s="'"+s;return '"'+s.replaceAll('"','""')+'"'};
+    const head=['Tanggal','ID','Nama','Waktu','Status','Metode','Jarak (m)','Akurasi GPS (m)','Keterangan'];
+    const csv='\ufeff'+[head.map(q).join(','),...rows.map(r=>[r.date,r.id,r.name,r.time,r.status,r.method,r.dist,r.acc,r.note].map(q).join(','))].join('\n');
+    const link=document.createElement('a');
+    link.href=URL.createObjectURL(new Blob([csv],{type:'text/csv;charset=utf-8'}));
+    link.download='rekap-absensi-'+todayKey()+'.csv';
+    link.click();setTimeout(()=>URL.revokeObjectURL(link.href),2000);
+    toast(rows.length?`CSV siap: ${rows.length} baris.`:'CSV diunduh, tapi belum ada data absensi.');
+  }catch(e){console.error(e);toast('Gagal membuat CSV: '+(e.message||''))}
+}
 document.addEventListener('DOMContentLoaded',()=>{seed();const page=document.body.dataset.page;if(page==='login')login();if(page==='student')student();if(page==='admin')admin();if(page==='tv')tv()});
 
 window.$=$;
