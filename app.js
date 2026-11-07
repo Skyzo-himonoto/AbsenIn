@@ -350,26 +350,14 @@ async function rotate(){
 async function closeSession(){
   try{await updateDoc(doc(db,'sessions','current'),{active:false,token:'',tokenExpiresAt:Timestamp.fromMillis(0),closedAt:serverTimestamp()});toast('Sesi QR ditutup untuk semua perangkat.')}catch(e){console.error(e);toast('Gagal menutup sesi: '+e.message)}
 }
-let tvMapObj=null,tvLayer=null;
 function showSessionLoc(s){
   const la=$('#tvLat'),lo=$('#tvLng'),ra=$('#tvRad');
   if(!s||!Number.isFinite(s.lat)||!Number.isFinite(s.lng)){if(la)la.value='';if(lo)lo.value='';if(ra)ra.value='';return}
-  const radius=Number.isFinite(s.radius)?s.radius:50;
-  if(la)la.value=s.lat.toFixed(6);if(lo)lo.value=s.lng.toFixed(6);if(ra)ra.value=radius+' meter';
-  const box=$('#tvMap');if(!box||!window.L)return;
-  if(!tvMapObj){
-    tvMapObj=L.map(box,{zoomControl:false,dragging:false,scrollWheelZoom:false,touchZoom:false,doubleClickZoom:false,boxZoom:false,keyboard:false});
-    L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png',{maxZoom:19,attribution:'© OpenStreetMap'}).addTo(tvMapObj);
-  }
-  if(tvLayer)tvLayer.remove();
-  const c=L.circle([s.lat,s.lng],{radius,color:'#f59b22',fillOpacity:.15});
-  const m=L.marker([s.lat,s.lng]);
-  tvLayer=L.layerGroup([c,m]).addTo(tvMapObj);
-  tvMapObj.fitBounds(c.getBounds(),{padding:[10,10],animate:false});
-  setTimeout(()=>tvMapObj.invalidateSize(),200);
+  if(la)la.value=s.lat.toFixed(6);if(lo)lo.value=s.lng.toFixed(6);if(ra)ra.value=(Number.isFinite(s.radius)?s.radius:50)+' meter';
 }
 function drawQR(s){
-  window.currentQrSession=s;showSessionLoc(s);
+  window.currentQrSession=s;
+  try{showSessionLoc(s)}catch(e){console.warn('lokasi',e)}
   const img=$('#qrImage'),status=$('#qrStatus');
   if(!s||!s.active||!s.token){img.removeAttribute('src');status.textContent='Sesi ditutup';$('#countdown').textContent='—';return}
   const expires=s.tokenExpiresAt?.toMillis?.()||0;
