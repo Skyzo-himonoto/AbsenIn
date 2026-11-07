@@ -13,7 +13,7 @@
       <img class="brand-logo" src="absenin-logo.jpg" alt="Logo AbsenIn">
       <div>AbsenIn<small>PANEL PENGURUS</small></div>
     </a>
-    <div class="top-actions">
+    <div class="top-actions"><a class="btn small ghost" href="dashboard-siswa.html">Absen saya</a>
       <button class="icon-btn" data-theme>◐</button>
       <button class="icon-btn" data-logout-btn title="Keluar">↗</button>
     </div>
@@ -51,7 +51,7 @@
     <h2>Buka sesi QR absensi.</h2>
     <p>Token berganti setiap 30 detik. Pilih titik lokasi dan radius. Anggota hanya tercatat hadir jika GPS-nya berada di dalam lingkaran.</p>
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
-    <div style="display:flex;gap:8px;flex-wrap:wrap;margin:12px 0 8px"><button type="button" class="btn small" id="useMyLocation">◎ Pakai lokasi saya</button><span class="muted" style="font-size:12px;align-self:center">atau ketuk titik di peta</span></div>
+    <div style="display:flex;gap:8px;flex-wrap:wrap;margin:12px 0 8px"><button type="button" class="btn small" id="useMyLocation">◎ Pakai lokasi saya</button><button type="button" class="btn small ghost" id="saveLokasi">Simpan sebagai lokasi tetap</button></div><p class="muted" id="lokasiNote" style="font-size:12px;margin:0 0 8px">Ketuk titik di peta atau geser pin. Lokasi tetap akan terbuka otomatis lain kali.</p>
     <div id="sessionMap" style="height:300px;border-radius:16px;overflow:hidden;border:1px solid var(--line)"></div>
     <div class="form-row">
       <div>
@@ -66,10 +66,12 @@
     <label for="sessionRadius">Radius absen: <b id="radiusOut">100</b> meter</label>
     <input id="sessionRadius" type="range" min="20" max="300" step="10" value="100" style="width:100%;accent-color:var(--orange)">
     <p class="muted" style="font-size:12px;margin:6px 0 14px">Saran: ukur lebar sekolah, lalu pilih radius yang menutupi area kegiatan. GPS di dalam gedung bisa meleset 10-30 m.</p>
+    <div class="form-row" style="grid-template-columns:repeat(3,1fr)"><div><label for="sessionOpen">Dibuka</label><input id="sessionOpen" class="input" type="time"></div><div><label for="sessionOnTime">Tepat waktu s.d.</label><input id="sessionOnTime" class="input" type="time"></div><div><label for="sessionClose">Ditutup</label><input id="sessionClose" class="input" type="time"></div></div><p class="muted" style="font-size:12px;margin:6px 0 14px">Jam WIB. Absen setelah batas tepat waktu = Telat; setelah ditutup tidak bisa absen. Kosongkan semua kalau tanpa batas waktu.</p>
     <button id="openSession" class="btn">▦ Buka layar QR →</button> 
     <a href="verifikasi.html" target="_blank" class="btn ghost">Lihat layar QR</a>
   </section>
 
+  <section class="card" style="margin-bottom:20px"><div class="section-head"><div><div class="eyebrow">HARI INI</div><h2>Rekap kehadiran</h2></div></div><div class="table-wrap"><table><thead><tr><th>Nama</th><th>ID</th><th>Status</th><th>Catatan</th></tr></thead><tbody id="recapRows"></tbody></table></div><p class="muted" style="font-size:12px;margin:10px 0 0">Alpa muncul setelah sesi ditutup: tidak absen dan tidak ada izin yang diajukan/disetujui.</p></section>
   <section class="card" style="margin-bottom:20px">
     <div class="section-head">
       <div>
@@ -147,6 +149,6 @@
 
   <p class="footnote">Data profil anggota harus dibuat di Firebase Authentication dan Firestore. Rekap kehadiran dibaca dari Cloud Firestore.</p>
 </main>
-<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script><script src="peta.js"></script><script type="module" src="app.js"></script>
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script><script type="module" src="peta.js"></script><script type="module" src="app.js"></script>
 </body>
 </html>

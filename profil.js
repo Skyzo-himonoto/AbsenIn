@@ -91,6 +91,7 @@ onAuthStateChanged(auth, async u => {
     $("#pfKelas").textContent = d.kelas || "Anggota Robotik";
     $("#pfRole").textContent = role;
     $("#pfRole2").textContent = role;
+    if (role === "Pengurus") $("#toPengurus")?.classList.remove("hidden");
     if (display) { const g = $("#userName"); if (g) g.textContent = display.split(" ")[0] + "!"; }
   } catch (e) { say("Gagal memuat profil: " + (e.message || e)); }
   paint();
